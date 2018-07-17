@@ -1,0 +1,15 @@
+{
+    "name": "localbot",
+    "description": "",
+    "secretKey": "",
+    "services": [
+        {
+            "id": "d46af6b0-7f6e-11e8-a7d4-41c35abf7df7",
+            "name": "http://localhost:3978/api/messages",
+            "type": "endpoint",
+            "appId": "",
+            "appPassword": "",
+            "endpoint": "http://localhost:3978/api/messages"
+        }
+    ]
+}

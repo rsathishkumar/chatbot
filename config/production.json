@@ -1,0 +1,8 @@
+{
+  "DB": {
+    "host": "saprod.database.windows.net",
+      "database": "SA_Bot",
+    "username": "sappsadmin",
+      "password": "safalapps123$%"
+  }
+}

@@ -6,6 +6,11 @@ var restify = require('restify');
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
 var builder_cognitiveservices = require("botbuilder-cognitiveservices");
+const _ = require('lodash');
+const SQLProcessing = require('./SQLProcessing');
+var PhoneNumber = require( 'awesome-phonenumber' );
+
+
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -37,37 +42,24 @@ var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azu
 var bot = new builder.UniversalBot(connector);
 bot.set('storage', tableStorage);
 
-// Recognizer and and Dialog for preview QnAMaker service
-var previewRecognizer = new builder_cognitiveservices.QnAMakerRecognizer({
-    knowledgeBaseId: process.env.QnAKnowledgebaseId,
-    authKey: process.env.QnAAuthKey || process.env.QnASubscriptionKey
-});
-
-var basicQnAMakerPreviewDialog = new builder_cognitiveservices.QnAMakerDialog({
-    recognizers: [previewRecognizer],
-    defaultMessage: 'No match! Try changing the query terms!',
-    qnaThreshold: 0.3
-}
-);
-
-    
-
-bot.dialog('basicQnAMakerPreviewDialog', basicQnAMakerPreviewDialog);
+var qnaMakerTools = new builder_cognitiveservices.QnAMakerTools();
+bot.library(qnaMakerTools.createLibrary());
 
 // Recognizer and and Dialog for GA QnAMaker service
 var recognizer = new builder_cognitiveservices.QnAMakerRecognizer({
     knowledgeBaseId: process.env.QnAKnowledgebaseId,
     authKey: process.env.QnAAuthKey || process.env.QnASubscriptionKey, // Backward compatibility with QnAMaker (Preview)
-    endpointHostName: process.env.QnAEndpointHostName
+    endpointHostName: process.env.QnAEndpointHostName,
+    top: 3
 });
-
+/*
 var basicQnAMakerDialog = new builder_cognitiveservices.QnAMakerDialog({
     recognizers: [recognizer],
     defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Cluster, Occupation and Wages for Texans. Type #help for more options.',
     qnaThreshold: 0.3
 }
 );
-
+*/
 
 bot.on('conversationUpdate', function (message) {
   if (message.membersAdded && message.membersAdded.length > 0) {
@@ -82,26 +74,44 @@ bot.on('conversationUpdate', function (message) {
   }
 });
 
+const basicQnAMakerDialog = new builder_cognitiveservices.QnAMakerDialog({
+    recognizers: [recognizer],
+    defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Cluster, Occupation and Wages for Texans. Type #help for more options.',
+    qnaThreshold: 0.3,
+    feedbackLib: qnaMakerTools
+});
+
+basicQnAMakerDialog.defaultWaitNextMessage = (session, qnaMakerResult) => {
+    const phone_number =  session.message.user.id;
+    var area_code = "";
+    var source = "Website";
+    const query = session.privateConversationData.qnaFeedbackUserQuestion;
+    const question = _.get(qnaMakerResult, 'answers[0].questions[0]');
+    const answer = _.get(qnaMakerResult, 'answers[0].answer') || "No Answer";
+    if(PhoneNumber( phone_number ).isValid()) {
+        var phone = phone_number.replace( /^\+?[10]/, '' ).replace( /[^0-9]/g, '' ).match( /^([0-9]{3})/ );
+        area_code = phone[1];
+        source = "Mobile";    
+    }
+    
+    
+    SQLProcessing.saveDialog(query, _.unescape(question), _.unescape(answer), source, area_code)
+        .then(() => {
+            console.log('ok')
+        })
+        .catch((oErr) => {
+            console.log(oErr);
+        });
+
+    console.log('Area number: ' + area_code);
+    console.log('User Query: ' + query);
+    console.log('KB Question: ' + _.unescape(question));
+    console.log('KB Answer: ' + _.unescape(answer));
+
+    session.endDialog();
+};
+
 bot.dialog('basicQnAMakerDialog', basicQnAMakerDialog);
 
-bot.dialog('/', //basicQnAMakerDialog);
-    [
-        function (session) {
-            var qnaKnowledgebaseId = process.env.QnAKnowledgebaseId;
-            var qnaAuthKey = process.env.QnAAuthKey || process.env.QnASubscriptionKey;
-            var endpointHostName = process.env.QnAEndpointHostName;
-          
-            // QnA Subscription Key and KnowledgeBase Id null verification
-            if ((qnaAuthKey == null || qnaAuthKey == '') || (qnaKnowledgebaseId == null || qnaKnowledgebaseId == ''))
-                session.send('Please set QnAKnowledgebaseId, QnAAuthKey and QnAEndpointHostName (if applicable) in App Settings. Learn how to get them at https://aka.ms/qnaabssetup.');
-            else {
-                if (endpointHostName == null || endpointHostName == '')
-                    // Replace with Preview QnAMakerDialog service
-                    session.replaceDialog('basicQnAMakerPreviewDialog');
-                else
-                    // Replace with GA QnAMakerDialog service
-                    session.replaceDialog('basicQnAMakerDialog');
-            }
-        }
-    ]);
+bot.dialog('/', basicQnAMakerDialog);
     

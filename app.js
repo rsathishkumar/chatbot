@@ -9,6 +9,7 @@ var builder_cognitiveservices = require("botbuilder-cognitiveservices");
 const _ = require('lodash');
 const SQLProcessing = require('./SQLProcessing');
 var PhoneNumber = require( 'awesome-phonenumber' );
+var QnAMakerDialogSerialNum = require( './QnAMakerDialogSerialNum' );
 
 
 
@@ -42,7 +43,9 @@ var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azu
 var bot = new builder.UniversalBot(connector);
 bot.set('storage', tableStorage);
 
-var qnaMakerTools = new builder_cognitiveservices.QnAMakerTools();
+//var qnaMakerTools = new builder_cognitiveservices.QnAMakerTools();
+//bot.library(qnaMakerTools.createLibrary());
+var qnaMakerTools = new QnAMakerDialogSerialNum.QnAMakerDialogSerialNum();
 bot.library(qnaMakerTools.createLibrary());
 
 // Recognizer and and Dialog for GA QnAMaker service
@@ -80,20 +83,40 @@ const basicQnAMakerDialog = new builder_cognitiveservices.QnAMakerDialog({
     qnaThreshold: 0.3,
     feedbackLib: qnaMakerTools
 });
+const basicQnAMakerDialog2 = basicQnAMakerDialog;
+
+basicQnAMakerDialog.respondFromQnAMakerResult = (session, qnaMakerResult) => {
+  var question = session.message.text;
+  if(question == "#help") {
+        var msg = new builder.Message(session)
+    .text("What would you like assistance with?")
+    .suggestedActions(
+        builder.SuggestedActions.create(
+                session, [
+                    builder.CardAction.imBack(session, "Texas Workforce Commission", "1. Texas Workforce Commission"),
+                    builder.CardAction.imBack(session, "Jobs Y’all", "2. Jobs Y’all")
+                ]
+            ));
+        session.send(msg);
+        session.endDialog();
+      }
+      else {
+          session.send(qnaMakerResult.answers[0].answer);
+      }
+};
 
 basicQnAMakerDialog.defaultWaitNextMessage = (session, qnaMakerResult) => {
     const phone_number =  session.message.user.id;
     var area_code = "";
     var source = "Website";
-    const query = session.privateConversationData.qnaFeedbackUserQuestion;
+    const query = session.privateConversationData.qnaFeedbackUserQuestion;    
     const question = _.get(qnaMakerResult, 'answers[0].questions[0]');
     const answer = _.get(qnaMakerResult, 'answers[0].answer') || "No Answer";
     if(PhoneNumber( phone_number ).isValid()) {
         var phone = phone_number.replace( /^\+?[10]/, '' ).replace( /[^0-9]/g, '' ).match( /^([0-9]{3})/ );
         area_code = phone[1];
         source = "Mobile";    
-    }
-    
+    }    
     
     SQLProcessing.saveDialog(query, _.unescape(question), _.unescape(answer), source, area_code)
         .then(() => {
@@ -110,6 +133,7 @@ basicQnAMakerDialog.defaultWaitNextMessage = (session, qnaMakerResult) => {
 
     session.endDialog();
 };
+
 
 bot.dialog('basicQnAMakerDialog', basicQnAMakerDialog);
 

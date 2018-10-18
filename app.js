@@ -26,6 +26,15 @@ var connector = new builder.ChatConnector({
     openIdMetadata: process.env.BotOpenIdMetadata 
 });
 
+// new valid token is automatically stored to the bot
+setInterval(() => {
+    connector.getAccessToken((error) => {
+            console.log(JSON.stringify(error));
+        }, (token) => {
+            console.log(`token refreshed: ${token}`); 
+        });
+}, 30 * 60 * 1000 /* 30 minutes in milliseconds*/ );
+
 // Listen for messages from users 
 server.post('/api/messages', connector.listen());
 
@@ -35,13 +44,13 @@ server.post('/api/messages', connector.listen());
 * For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
 * ---------------------------------------------------------------------------------------- */
 
-var tableName = 'botdata';
-var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env['AzureWebJobsStorage']);
-var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azureTableClient);
+//var tableName = 'botdata';
+//var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env['AzureWebJobsStorage']);
+//var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azureTableClient);
 
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector);
-bot.set('storage', tableStorage);
+//bot.set('storage', tableStorage);
 
 //var qnaMakerTools = new builder_cognitiveservices.QnAMakerTools();
 //bot.library(qnaMakerTools.createLibrary());
@@ -88,16 +97,37 @@ const basicQnAMakerDialog2 = basicQnAMakerDialog;
 basicQnAMakerDialog.respondFromQnAMakerResult = (session, qnaMakerResult) => {
   var question = session.message.text;
   if(question == "#help") {
-        var msg = new builder.Message(session)
-    .text("What would you like assistance with?")
-    .suggestedActions(
-        builder.SuggestedActions.create(
-                session, [
-                    builder.CardAction.imBack(session, "Texas Workforce Commission", "1. Texas Workforce Commission"),
-                    builder.CardAction.imBack(session, "Jobs Y’all", "2. Jobs Y’all")
-                ]
-            ));
-        session.send(msg);
+        var adaptiveCardMessage = new builder.Message(session)
+        .addAttachment({
+            contentType: "application/vnd.microsoft.card.adaptive",
+            content: {
+                type: "AdaptiveCard",
+                "width": "auto",
+                   body: [
+                        {
+                            "type": "TextBlock",
+                            "text": "What would you like assistance with?",
+                            "wrap": true
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Action.Submit",
+                            "title": "Texas Workforce Commission",
+                            "data": "Texas Workforce Commission",
+                            "wrap": true
+                        },
+                        {
+                            "type": "Action.Submit",
+                            "title": "Jobs Y’all",
+                            "data": "Jobs Y’all",
+                            "wrap": true
+                        }
+                    ]
+            }
+        }); 
+//        console.log(session.message.address.channelId);
+        session.send(adaptiveCardMessage);
         session.endDialog();
       }
       else {
@@ -138,4 +168,3 @@ basicQnAMakerDialog.defaultWaitNextMessage = (session, qnaMakerResult) => {
 bot.dialog('basicQnAMakerDialog', basicQnAMakerDialog);
 
 bot.dialog('/', basicQnAMakerDialog);
-    

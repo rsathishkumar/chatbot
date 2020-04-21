@@ -44,13 +44,13 @@ server.post('/api/messages', connector.listen());
 * For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
 * ---------------------------------------------------------------------------------------- */
 
-//var tableName = 'botdata';
-//var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env['AzureWebJobsStorage']);
-//var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azureTableClient);
+var tableName = 'botdata';
+var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env['AzureWebJobsStorage']);
+var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azureTableClient);
 
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector);
-//bot.set('storage', tableStorage);
+bot.set('storage', tableStorage);
 
 //var qnaMakerTools = new builder_cognitiveservices.QnAMakerTools();
 //bot.library(qnaMakerTools.createLibrary());
@@ -67,7 +67,7 @@ var recognizer = new builder_cognitiveservices.QnAMakerRecognizer({
 /*
 var basicQnAMakerDialog = new builder_cognitiveservices.QnAMakerDialog({
     recognizers: [recognizer],
-    defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Cluster, Occupation and Wages for Texans. Type #help for more options.',
+    defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Cluster, Occupation and Wages for Texas.',
     qnaThreshold: 0.3
 }
 );
@@ -79,8 +79,7 @@ bot.on('conversationUpdate', function (message) {
       if (identity.id === message.address.bot.id) {
         bot.send(new builder.Message().address(message.address).text('Hello, I am an Interactive Virtual Assistant' +
             ' (iVA) that can help answer your questions about the eight Texas Industry Clusters. You can ask me questions like' +
-            ' “What is the Texas Workforce Commission?” and “What are the Texas Industry Clusters?”. For all other questions type #help.'));
-        bot.send(new builder.Message().address(message.address).text('How can I help you? '));
+            ' “What is the Texas Workforce Commission?” and “What are the Texas Industry Clusters?”. How can I help you?'));
       }
     });
   }
@@ -88,52 +87,10 @@ bot.on('conversationUpdate', function (message) {
 
 const basicQnAMakerDialog = new builder_cognitiveservices.QnAMakerDialog({
     recognizers: [recognizer],
-    defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Cluster, Occupation and Wages for Texans. Type #help for more options.',
+    defaultMessage: 'I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Clusters, Occupations and Wages for Texas.',
     qnaThreshold: 0.3,
     feedbackLib: qnaMakerTools
 });
-const basicQnAMakerDialog2 = basicQnAMakerDialog;
-
-basicQnAMakerDialog.respondFromQnAMakerResult = (session, qnaMakerResult) => {
-  var question = session.message.text;
-  if(question == "#help") {
-        var adaptiveCardMessage = new builder.Message(session)
-        .addAttachment({
-            contentType: "application/vnd.microsoft.card.adaptive",
-            content: {
-                type: "AdaptiveCard",
-                "width": "auto",
-                   body: [
-                        {
-                            "type": "TextBlock",
-                            "text": "What would you like assistance with?",
-                            "wrap": true
-                        }
-                    ],
-                    "actions": [
-                        {
-                            "type": "Action.Submit",
-                            "title": "Texas Workforce Commission",
-                            "data": "Texas Workforce Commission",
-                            "wrap": true
-                        },
-                        {
-                            "type": "Action.Submit",
-                            "title": "Jobs Y’all",
-                            "data": "Jobs Y’all",
-                            "wrap": true
-                        }
-                    ]
-            }
-        }); 
-//        console.log(session.message.address.channelId);
-        session.send(adaptiveCardMessage);
-        session.endDialog();
-      }
-      else {
-          session.send(qnaMakerResult.answers[0].answer);
-      }
-};
 
 basicQnAMakerDialog.defaultWaitNextMessage = (session, qnaMakerResult) => {
     const phone_number =  session.message.user.id;

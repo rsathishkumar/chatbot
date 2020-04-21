@@ -18,7 +18,7 @@ const fnSaveDialog = (query, question, answer, source, area_code) => {
 
         connection.on('connect', function(err) {
             if (err) {
-                return reject('SQL Connection error.');
+                return reject("SQL connection error");
             }
 
             const insert = new Request(

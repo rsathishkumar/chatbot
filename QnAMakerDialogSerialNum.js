@@ -15,17 +15,20 @@ var QnAMakerDialogSerialNum = (function () {
                 builder.Prompts.choice(session, "Did you mean:", questionOptions, promptOptions);
             },
             function (session, results) {
-                if (results && results.response && results.response.entity) {
-                    var qnaMakerResult = session.dialogData.qnaMakerResult;
-                    var filteredResult = qnaMakerResult.answers.filter(function (qna) { return qna.questions[0] === results.response.entity; });
-                    if (filteredResult !== null && filteredResult.length > 0) {
-                        var selectedQnA = filteredResult[0];
-                        session.send(selectedQnA.answer);
-                        session.endDialogWithResult({ response: selectedQnA });
-                    }
+                    if (results && results.response && results.response.entity) {
+                        var qnaMakerResult = session.dialogData.qnaMakerResult;
+                        var filteredResult = qnaMakerResult.answers.filter(function (qna) { return qna.questions[0] === results.response.entity; });
+                        if (filteredResult !== null && filteredResult.length > 0) {
+                            var selectedQnA = filteredResult[0];
+                            session.send(selectedQnA.answer);
+                            session.endDialogWithResult({ response: selectedQnA });
+                        }
+                        else if(results.response.entity == "None of the above.") {
+                            session.send('Never mind. You can ask me something else such as “What is the Texas Workforce Commission?” or “What are the Texas Industry Clusters?” So how can I help you?');
+                        }
                 }
                 else {
-                    session.send("Sorry! Not able to match any of the options.");
+                    session.send("I am not sure I can answer this question. You can ask me about the Texas Workforce Commission, Texas Industry Clusters, Occupations and Wages for Texas.");
                 }
                 session.endDialog();
             },

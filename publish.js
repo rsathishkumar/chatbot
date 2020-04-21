@@ -4,10 +4,10 @@ var fs = require('fs');
 var request = require('request');
 
 var rootFolder = path.resolve('.');
-var zipPath = path.resolve(rootFolder, '../qnafaqv3.zip');
-var kuduApi = 'https://qnafaqv3.scm.azurewebsites.net/api/zip/site/wwwroot';
-var userName = '$qnafaqv3';
-var password = 'jrCu8LRZSKHfxjBhRtqgjGi0Fhg8lyCanu0EDuRZ0xNqJRr7ybxQQJncgDe2';
+var zipPath = path.resolve(rootFolder, '../twcjobsyall-b145.zip');
+var kuduApi = 'https://twcjobsyall-b145.scm.azurewebsites.net/api/zip/site/wwwroot';
+var userName = '$twcjobsyall-b145';
+var password = 'ilnCfPkcbieaHytGNKkSrGmW3jvGuWXG2LfA5ywlR3YnRwShFErJ44lCfn6h';
 
 function uploadZip(callback) {
   fs.createReadStream(zipPath).pipe(request.put(kuduApi, {
@@ -45,8 +45,8 @@ function publish(callback) {
 
 publish(function(err) {
   if (!err) {
-    console.log('qnafaqv3 publish');
+    console.log('twcjobsyall-b145 publish');
   } else {
-    console.error('failed to publish qnafaqv3', err);
+    console.error('failed to publish twcjobsyall-b145', err);
   }
 });
